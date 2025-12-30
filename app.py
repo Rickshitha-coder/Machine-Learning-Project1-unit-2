@@ -2,11 +2,16 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-from sklearn.linear_model import LinearRegression, Ridge, Lasso
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.pipeline import Pipeline
-from sklearn.metrics import r2_score
+from sklearn.linear_model import Lasso
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+
+# ==================================
+# Page Config
+# ==================================
+st.set_page_config(page_title="Internet Usage Plan Advisor", layout="centered")
 
 # ==================================
 # Load Dataset
@@ -18,52 +23,37 @@ X = data[['streaming_hours',
           'online_classes_hours',
           'gaming_hours',
           'devices']]
+
 y = data['monthly_usage_gb']
 
 # ==================================
-# Split Dataset for Validation
+# Train-Test Split
 # ==================================
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
 
 # ==================================
-# Define Models
+# Model (ONLY ONE)
 # ==================================
-models = {
-    "Linear Regression": LinearRegression(),
-    "Ridge Regression": Ridge(alpha=1.0),
-    "Lasso Regression": Lasso(alpha=0.01),
-    "Polynomial Regression": Pipeline([
-        ("poly", PolynomialFeatures(degree=2)),
-        ("model", LinearRegression())
-    ])
-}
+model = Pipeline([
+    ("scaler", StandardScaler()),
+    ("lasso", Lasso(alpha=0.01))
+])
 
-# ==================================
-# Train & Evaluate Models
-# ==================================
-scores = {}
-trained_models = {}
+model.fit(X_train, y_train)
 
-for name, model in models.items():
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)  # Evaluate on test set!
-    scores[name] = r2_score(y_test, y_pred)
-    trained_models[name] = model
-
-# Select best model based on validation R²
-best_model_name = max(scores, key=scores.get)
-best_model = trained_models[best_model_name]
+# Model Evaluation
+y_pred = model.predict(X_test)
+r2 = r2_score(y_test, y_pred)
 
 # ==================================
 # Streamlit UI
 # ==================================
-st.set_page_config(page_title="Internet Usage Plan Advisor", layout="centered")
 st.title("📶 Internet Usage Plan Advisor")
-st.write("Smart prediction using advanced regression techniques")
+st.write("Predict monthly internet usage and recommend the best data plan")
 
-st.subheader("Enter Your Weekly Usage")
+st.subheader("📥 Enter Your Weekly Usage")
 
 streaming = st.number_input("🎬 Streaming Hours / Week", min_value=0)
 social = st.number_input("📱 Social Media Hours / Week", min_value=0)
@@ -77,7 +67,7 @@ devices = st.number_input("📱 Number of Connected Devices", min_value=1)
 if st.button("🔍 Predict Usage & Suggest Plan"):
 
     input_data = np.array([[streaming, social, classes, gaming, devices]])
-    usage_pred = best_model.predict(input_data)[0]
+    usage_pred = model.predict(input_data)[0]
     daily_usage = usage_pred / 30
 
     # Plan logic
@@ -103,9 +93,9 @@ if st.button("🔍 Predict Usage & Suggest Plan"):
     st.info(f"Plan: {plan}")
     st.warning(f"Estimated Cost: {cost}")
 
-    st.subheader("🧠 Model Used (Automatically Selected)")
-    st.write(f"✅ **{best_model_name}**")
-    st.write(f"R² Score (Validation): {scores[best_model_name]:.3f}")
+    st.subheader("🧠 Model Used")
+    st.write("✅ **Lasso Regression**")
+    st.write(f"R² Score (Validation): {r2:.3f}")
 
     # Usage Breakdown
     st.subheader("📊 Estimated Usage Breakdown")
@@ -127,4 +117,4 @@ if st.button("🔍 Predict Usage & Suggest Plan"):
 
 # Footer
 st.markdown("---")
-st.caption("Internet Usage Plan Advisor using Advanced Regression")
+st.caption("Internet Usage Plan Advisor using Lasso Regression")
