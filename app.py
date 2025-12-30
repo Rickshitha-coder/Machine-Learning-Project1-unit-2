@@ -6,6 +6,7 @@ from sklearn.linear_model import LinearRegression, Ridge, Lasso
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import r2_score
+from sklearn.model_selection import train_test_split
 
 # ==================================
 # Load Dataset
@@ -20,7 +21,14 @@ X = data[['streaming_hours',
 y = data['monthly_usage_gb']
 
 # ==================================
-# Train Multiple Regression Models
+# Split Dataset for Validation
+# ==================================
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# ==================================
+# Define Models
 # ==================================
 models = {
     "Linear Regression": LinearRegression(),
@@ -32,16 +40,19 @@ models = {
     ])
 }
 
+# ==================================
+# Train & Evaluate Models
+# ==================================
 scores = {}
 trained_models = {}
 
 for name, model in models.items():
-    model.fit(X, y)
-    y_pred = model.predict(X)
-    scores[name] = r2_score(y, y_pred)
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)  # Evaluate on test set!
+    scores[name] = r2_score(y_test, y_pred)
     trained_models[name] = model
 
-# Select best model
+# Select best model based on validation R²
 best_model_name = max(scores, key=scores.get)
 best_model = trained_models[best_model_name]
 
@@ -83,9 +94,7 @@ if st.button("🔍 Predict Usage & Suggest Plan"):
         cost = "₹999 / month"
         category = "Heavy User"
 
-    # ==================================
     # Output
-    # ==================================
     st.success(f"📊 Predicted Monthly Usage: {usage_pred:.2f} GB")
     st.info(f"📅 Estimated Daily Usage: {daily_usage:.2f} GB/day")
     st.success(f"🏷️ Usage Category: {category}")
@@ -96,23 +105,17 @@ if st.button("🔍 Predict Usage & Suggest Plan"):
 
     st.subheader("🧠 Model Used (Automatically Selected)")
     st.write(f"✅ **{best_model_name}**")
-    st.write(f"R² Score: {scores[best_model_name]:.3f}")
+    st.write(f"R² Score (Validation): {scores[best_model_name]:.3f}")
 
-    # ==================================
     # Usage Breakdown
-    # ==================================
     st.subheader("📊 Estimated Usage Breakdown")
-
     st.write(f"🎬 Streaming: {streaming * 3:.1f} GB")
     st.write(f"📱 Social Media: {social * 1.5:.1f} GB")
     st.write(f"🎓 Online Classes: {classes * 2:.1f} GB")
     st.write(f"🎮 Gaming: {gaming * 4:.1f} GB")
 
-    # ==================================
     # Smart Tips
-    # ==================================
     st.subheader("💡 Smart Usage Tips")
-
     if streaming > 20:
         st.write("🔹 Reduce video quality to save streaming data.")
     if gaming > 15:
@@ -124,4 +127,4 @@ if st.button("🔍 Predict Usage & Suggest Plan"):
 
 # Footer
 st.markdown("---")
-st.caption("Mini Project | Internet Usage Plan Advisor using Advanced Regression")
+st.caption("Internet Usage Plan Advisor using Advanced Regression")
